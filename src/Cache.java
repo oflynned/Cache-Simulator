@@ -1,39 +1,58 @@
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * Created by ed on 21/12/2016.
- */
 class Cache {
-    private int l, k, n;
-    private List<CacheSet> sets = new ArrayList<>();
-
-    Cache(int l, int k, int n) {
-        this.l = l;
-        this.k = k;
-        this.n = n;
-
-        for (int i = 0; i < n; i++) sets.add(i, new CacheSet(k));
+    enum ReplacementPolicy {
+        LRU,
+        PSEUDO_LRU
     }
 
-    boolean checkTagSet(String address) {
-        int a = (int) Long.parseLong(address, 16);
-        int setNumber = (a >> 4) & ((1 << (int) (Math.log(getN()) / Math.log(2))) - 1);
-        int tag = a >> ((int) (Math.log(getN()) / Math.log(2)) + 4);
+    private int accesses;
+    private int hits;
 
-        CacheSet set = sets.get(setNumber);
-        return set.checkTag(tag);
+    private int numOffsetBits;
+    private int numSetBits;
+
+    private CacheSet[] cacheSets;
+
+    Cache(int l, int k, int n, ReplacementPolicy policy) {
+        this.cacheSets = new CacheSet[n];
+        for (int i = 0; i < cacheSets.length; i++) {
+            switch (policy) {
+                case LRU:
+                    cacheSets[i] = new LRUCacheSet(k);
+                    break;
+                case PSEUDO_LRU:
+                    cacheSets[i] = new PseudoLRUCacheSet(k);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // Surprisingly, Java doesn't have an arbitrary base log function so doing some ~maths~ here
+        this.numOffsetBits = (int) Math.ceil(Math.log(l) / Math.log(2));
+        this.numSetBits = (int) Math.ceil(Math.log(n) / Math.log(2));
     }
 
-    int getL() {
-        return l;
+    boolean access(int address) {
+        this.accesses++;
+        int setNumber = (address >> this.numOffsetBits) & mask(this.numSetBits);
+        int tag = address >> (this.numSetBits + this.numOffsetBits);
+
+        boolean hit = this.cacheSets[setNumber].access(tag);
+        if (hit) {
+            this.hits++;
+        }
+        return hit;
     }
 
-    int getK() {
-        return k;
+    int getAccesses() {
+        return this.accesses;
     }
 
-    int getN() {
-        return n;
+    int getHits() {
+        return this.hits;
+    }
+
+    private int mask(int numBits) {
+        return (1 << numBits) - 1;
     }
 }

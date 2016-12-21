@@ -1,25 +1,40 @@
-import java.util.ArrayList;
-
-/**
- * Created by ed on 21/12/2016.
- */
 public class Main {
 
     public static void main(String[] args) {
-        ArrayList<Cache> caches = new ArrayList<>();
-        caches.add(new Cache(16, 8, 1));
-        caches.add(new Cache(16, 4, 2));
-        caches.add(new Cache(16, 2, 4));
-        caches.add(new Cache(16, 1, 8));
+        int[][] config = {
+                //lru
+                {16, 1, 8, 0},
+                {16, 2, 4, 0},
+                {16, 4, 2, 0},
+                {16, 8, 1, 0},
 
-        for (Cache cache : caches) {
-            int count = 0;
-            for (int i=0; i<Constants.inputs.length; i++) {
-                if (cache.checkTagSet(Constants.inputs[i]))
-                    count++;
+                //pseudo-lru
+                {16, 1, 8, 1},
+                {16, 2, 4, 1},
+                {16, 4, 2, 1},
+                {16, 8, 1, 1}
+        };
+
+        for (int[] aConfig : config) {
+            int l = aConfig[0];
+            int k = aConfig[1];
+            int n = aConfig[2];
+
+            // 0 is LRU, 1 is PSEUDO_LRU
+            Cache.ReplacementPolicy policy = Cache.ReplacementPolicy.values()[aConfig[3]];
+
+            Cache cache = new Cache(l, k, n, policy);
+            for (String address : Constants.inputs) {
+                int currAddress = Integer.parseInt(address, 16);
+                cache.access(currAddress);
             }
-            System.out.println("L:" + cache.getL() + ", K:" + cache.getK() +
-                    ", N:" + cache.getN() + ", Hits:" + count);
+
+            int accesses = cache.getAccesses();
+            int hits = cache.getHits();
+
+            System.out.println("L: " + l + ", K: " + k + ", N: " + n + ", Policy: " + policy.toString().replace("_", " "));
+            System.out.println("Accesses: " + accesses + ", Hits: " + hits + ", Hit rate: " +
+                    (double) hits / accesses + "\n");
         }
     }
 }
